@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Memory game by Josh Arnold</title>
+
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bulma/0.7.1/css/bulma.min.css">
+    <script defer src="https://use.fontawesome.com/releases/v5.1.0/js/all.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/vue@2.5.17/dist/vue.js"></script>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+    <link rel="stylesheet" href="style.css">
+  </head>
+
+	<body>
+		<section id="app" class="section">
+			<div class="container">
+
+				<!-- Title: Memory game -->
+				<div class="columns">
+					<div class="column is-12">
+						<h1 class="title" style="text-align: center;">Memory game</h1>
+						<p class="subtitle" style="text-align: center;">Created with love by <strong>Josh Arnold</strong>.</p>
+					</div>
+				</div>
+
+				<!-- The cards -->
+				<div v-for="i in 3" class="columns is-centered is-mobile is-multiline" style="padding-top: 1em;">			
+					<div v-for="j in 4" class="column is-narrow" style="margin: 0.1em; border-radius: 0.5em;">
+						<img v-bind:id="j + (i-1)*4" v-on:click="flipCard(j + (i-1)*4)" src="img/card.png" style="display: block; margin-left: auto; margin-right: auto; width: 7em;">				
+					</div>
+				</div>
+
+				<!-- Finished game text -->
+				<div class="columns is-centered is-mobile">
+					<div class="column is-narrow">
+						<p id="finished" class="subtitle" style="text-align: center; margin-top: 1.5em; opacity: 0;">Congratulations. You won the game in <strong>{{turns}} turns</strong>.</p>
+					</div>
+				</div>
+
+				<!-- Reset game button-->
+				<div class="columns is-centered is-mobile">
+					<div class="column is-narrow">
+						<a v-on:click="resetGame" id="reset" class="button is-primary" style="text-align: center; opacity: 0;">Reset game</a>
+					</div>
+				</div>
+
+			</div>			
+		</section>
+	</body>
+</html>
+
+<script>
+new Vue({
+  el: '#app',
+  data: {  	
+  	cards:[1, 1, 2, 2, 
+  		   3, 3, 5, 5, 
+  		   6, 6, 4, 4],
+  	flipped:[false, false, false, false, false, false, false, false, false, false, false, false],
+  	imgs:["img/card.png", "img/melon.png", "img/cat.png", "img/coffee.png", "img/cream.png", "img/poke.jpg", "img/diamond.jpg"],
+  	selected_imgs:[],
+  	selected_card_ids: [],
+  	matches: [],
+  	turns: 0,
+  	enabled: true,
+  	turn_delay: 1000  	
+  },
+  methods: {
+  	flipCard(card_id) {
+  		if (!this.$data.enabled) {
+  			return;
+  		}  		
+
+    	// Flip single card
+    	var flipped_count = this.$data.flipped.filter(Boolean).length;
+    	if (!this.$data.flipped[card_id-1] && flipped_count < 2 && !this.$data.matches.includes(card_id) && this.$data.enabled == true) {
+    		// Animate card flip    		
+    		this.animateCardFlip(card_id);
+    	}
+
+    	// If we have flipped over exactly two cards
+    	if (this.$data.flipped.filter(Boolean).length == 2) {
+    		this.$data.enabled = false;
+    		this.$data.turns += 1
+    		// Check if cards match
+	    	if (this.$data.selected_imgs[0] == this.$data.selected_imgs[1]) {	    		
+	    		this.animateCardMatch(750);
+	    	}else{
+	    		// Cards don't match	    		
+	    		this.resetCardImages(650)
+	    	}	    	
+	    	this.resetFlipped();      		
+    	}	
+
+    	// Check if game is won
+    	if (this.$data.matches.length == 12) {
+    		this.winGame(1);
+    	}
+
+    	setTimeout(() => this.$data.enabled = true, this.$data.turn_delay);
+  	}, 
+
+  	animateCardFlip(card_id) {
+		this.$data.flipped[card_id-1] = true;    		
+	    // Add selected img to array      	    
+		this.$data.selected_imgs.push(this.$data.imgs[this.$data.cards[card_id-1]]);
+		this.$data.selected_card_ids.push(card_id)
+		img_element = document.getElementById(card_id);
+  		img_src = this.$data.imgs[this.$data.cards[card_id-1]];
+  		img_element.src = img_src; 
+  	},
+
+  	animateCardMatch(time) {
+		$(document.getElementById(this.$data.selected_card_ids[0])).animate({opacity: 0.25}, time);
+		$(document.getElementById(this.$data.selected_card_ids[1])).animate({opacity: 0.25}, time);
+		this.$data.matches.push(this.$data.selected_card_ids[0])
+		this.$data.matches.push(this.$data.selected_card_ids[1])
+  	},
+
+  	resetCardImages(time) {
+		element_1 = document.getElementById(this.$data.selected_card_ids[0]);
+		element_2 = document.getElementById(this.$data.selected_card_ids[1]);
+		setTimeout(() => element_1.src = this.$data.imgs[0], time);
+		setTimeout(() => element_2.src = this.$data.imgs[0], time);
+  	},
+
+  	resetFlipped() {
+  		this.$data.flipped = this.$data.flipped.map(x => false);
+   		this.$data.selected_imgs = []
+  		this.$data.selected_card_ids = []  
+  	},
+
+  	winGame(opacity) {
+  	    var finished = document.getElementById("finished");
+    	var reset = document.getElementById("reset");    	
+   		$(finished).animate({opacity: opacity}, 1000);
+   		$(reset).animate({opacity: opacity}, 1000);
+  	},
+
+  	resetGame() {
+  		this.shuffle(this.$data.cards);
+  		this.$data.flipped = this.$data.flipped.map(x => false);
+  		this.$data.selected_imgs = []
+  		this.$data.selected_card_ids = []
+  		this.$data.matches = []
+  		this.$data.turns = 0
+  		this.$data.enabled = true
+  		this.winGame(0)
+  		 
+
+  		// Facing a weird glitch with using a for-loop for this
+    	this.wipeCard("1");
+    	this.wipeCard("2");
+    	this.wipeCard("3");
+    	this.wipeCard("4");
+    	this.wipeCard("5");	  		
+    	this.wipeCard("6");
+    	this.wipeCard("7");
+    	this.wipeCard("8");
+    	this.wipeCard("9");
+    	this.wipeCard("10");
+    	this.wipeCard("11");
+    	this.wipeCard("12");
+  	},
+
+  	wipeCard(id) {
+		element = document.getElementById(id);
+		element.src = this.$data.imgs[0];
+		$(element).animate({opacity: 1}, 500);
+  	},
+
+  	shuffle(a) {
+	    for (let i = a.length - 1; i > 0; i--) {
+	        const j = Math.floor(Math.random() * (i + 1));
+	        [a[i], a[j]] = [a[j], a[i]];
+	    }
+	    return a;
+	}
+
+  }
+})
+</script>
